@@ -67,7 +67,7 @@ public struct CodeEditSourceEditor: NSViewControllerRepresentable {
         useSystemCursor: Bool = true,
         undoManager: CEUndoManager? = nil,
         coordinators: [any TextViewCoordinator] = [],
-        breakpoints: Binding<Set<Breakpoint>> = .constant([])
+        breakpoints: Binding<[Breakpoint]> = .constant([])
     ) {
         self.text = .binding(text)
         self.language = language
@@ -93,14 +93,7 @@ public struct CodeEditSourceEditor: NSViewControllerRepresentable {
         }
         self.undoManager = undoManager
         self.coordinators = coordinators
-        self.breakpoints = Binding(
-            get: {
-                Set(breakpoints.wrappedValue.map { Breakpoint(line: $0.line - 1, isEnabled: $0.isEnabled) })
-            },
-            set: { newValue in
-                breakpoints.wrappedValue = Set(newValue.map { Breakpoint(line: $0.line + 1, isEnabled: $0.isEnabled) })
-            }
-        )
+        self.breakpoints = breakpoints.wrappedValue.map { Breakpoint(line: $0.line - 1, isEnabled: $0.isEnabled) }
     }
 
     /// Initializes a Text Editor
@@ -152,7 +145,7 @@ public struct CodeEditSourceEditor: NSViewControllerRepresentable {
         useSystemCursor: Bool = true,
         undoManager: CEUndoManager? = nil,
         coordinators: [any TextViewCoordinator] = [],
-        breakpoints: Binding<Set<Breakpoint>> = .constant([])
+        breakpoints: Binding<[Breakpoint]> = .constant([])
     ) {
         self.text = .storage(text)
         self.language = language
@@ -178,14 +171,7 @@ public struct CodeEditSourceEditor: NSViewControllerRepresentable {
         }
         self.undoManager = undoManager
         self.coordinators = coordinators
-        self.breakpoints = Binding(
-            get: {
-                Set(breakpoints.wrappedValue.map { Breakpoint(line: $0.line + 1, isEnabled: $0.isEnabled) })
-            },
-            set: { newValue in
-                breakpoints.wrappedValue = Set(newValue.map { Breakpoint(line: $0.line + 1, isEnabled: $0.isEnabled) })
-            }
-        )
+        self.breakpoints = breakpoints.wrappedValue.map { Breakpoint(line: $0.line - 1, isEnabled: $0.isEnabled) }
     }
 
     package var text: TextAPI
@@ -208,7 +194,7 @@ public struct CodeEditSourceEditor: NSViewControllerRepresentable {
     private var useSystemCursor: Bool
     private var undoManager: CEUndoManager?
     package var coordinators: [any TextViewCoordinator]
-    private let breakpoints: Binding<Set<Breakpoint>>
+    private let breakpoints: [Breakpoint]
 
     public typealias NSViewControllerType = TextViewController
 
@@ -278,7 +264,7 @@ public struct CodeEditSourceEditor: NSViewControllerRepresentable {
         updateControllerParams(controller: controller)
 
         // Update breakpoints directly without conditional binding
-        controller.gutterView.updateBreakpoints(breakpoints.wrappedValue)
+        controller.gutterView.updateBreakpoints(breakpoints)
 
         if !paramsAreEqual(controller: controller) {
             controller.reloadUI()

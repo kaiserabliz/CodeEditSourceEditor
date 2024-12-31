@@ -22,7 +22,7 @@ struct ContentView: View {
     @AppStorage("systemCursor") private var useSystemCursor: Bool = false
     @State private var isInLongParse = false
     
-    var myBreakpoints: Set<Breakpoint> {
+    var myBreakpoints: [Breakpoint] {
         return [Breakpoint(line: 6, isEnabled: true)]
     }
 

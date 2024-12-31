@@ -75,7 +75,7 @@ public class GutterView: NSView {
     private var maxLineLength: Int = 0
 
     /// The set of active breakpoints
-    private var breakpoints: Set<Breakpoint> = []
+    private var breakpoints: [Breakpoint] = []
     /// The color for enabled breakpoints
     @Invalidating(.display)
     var breakpointColor: NSColor = .systemBlue
@@ -305,7 +305,7 @@ public class GutterView: NSView {
 
     /// Updates the breakpoints in the gutter
     /// - Parameter breakpoints: The new set of breakpoints
-    public func updateBreakpoints(_ breakpoints: Set<Breakpoint>) {
+    public func updateBreakpoints(_ breakpoints: [Breakpoint]) {
         self.breakpoints = breakpoints
         self.needsDisplay = true
     }
@@ -323,9 +323,9 @@ public class GutterView: NSView {
 
     private func toggleBreakpoint(at line: Int) {
         if let existing = breakpoints.first(where: { $0.line == line }) {
-            breakpoints.remove(existing)
+            breakpoints.removeAll(where: { existing == $0 })
         } else {
-            breakpoints.insert(Breakpoint(line: line))
+            breakpoints.append(Breakpoint(line: line))
         }
         needsDisplay = true
     }
