@@ -74,6 +74,15 @@ public class GutterView: NSView {
     /// The maximum number of digits found for a line number.
     private var maxLineLength: Int = 0
 
+    /// The set of active breakpoints
+    private var breakpoints: Set<Breakpoint> = []
+    /// The color for enabled breakpoints
+    @Invalidating(.display)
+    var breakpointColor: NSColor = .systemBlue
+    /// The color for disabled breakpoints
+    @Invalidating(.display)
+    var disabledBreakpointColor: NSColor = .systemGray
+
     override public var isFlipped: Bool {
         true
     }
@@ -185,6 +194,44 @@ public class GutterView: NSView {
 
         context.restoreGState()
     }
+    // swiftlint:disable identifier_name
+    private func drawBreakpoints(_ context: CGContext) {
+        context.saveGState()
+        for breakpoint in breakpoints {
+            guard let line = textView?.layoutManager.visibleLines()
+                .first(where: { $0.index == breakpoint.line }) else {
+                continue
+            }
+            let color = breakpoint.isEnabled ? breakpointColor : disabledBreakpointColor
+            context.setFillColor(color.cgColor)
+            // Dimensions for the pencil shape
+            let width: CGFloat = 35
+            let height: CGFloat = 15
+            let tipLength: CGFloat = 4  // Length of the pencil tip
+            let leadingPadding: CGFloat = -25
+            let x = edgeInsets.leading - width - leadingPadding
+            let y = line.yPos + (line.height - height) / 2
+            // Create a path for the pencil shape
+            let path = CGMutablePath()
+            // Start from the tip (right point)
+            path.move(to: CGPoint(x: x + width + tipLength, y: y + height/2))
+            // Draw to top-right corner
+            path.addLine(to: CGPoint(x: x + width, y: y))
+            // Draw to top-left
+            path.addLine(to: CGPoint(x: x, y: y))
+            // Draw to bottom-left
+            path.addLine(to: CGPoint(x: x, y: y + height))
+            // Draw to bottom-right corner
+            path.addLine(to: CGPoint(x: x + width, y: y + height))
+            // Draw back to tip to complete the shape
+            path.addLine(to: CGPoint(x: x + width + tipLength, y: y + height/2))
+            path.closeSubpath()
+            context.addPath(path)
+            context.fillPath()
+        }
+        context.restoreGState()
+    }
+    // swiftlint:enable identifier_name
 
     private func drawLineNumbers(_ context: CGContext) {
         guard let textView = textView else { return }
@@ -245,6 +292,7 @@ public class GutterView: NSView {
         updateWidthIfNeeded()
         drawBackground(context)
         drawSelectedLines(context)
+        drawBreakpoints(context)
         drawLineNumbers(context)
         CATransaction.commit()
     }
@@ -253,5 +301,46 @@ public class GutterView: NSView {
         NotificationCenter.default.removeObserver(self)
         delegate = nil
         textView = nil
+    }
+
+    /// Updates the breakpoints in the gutter
+    /// - Parameter breakpoints: The new set of breakpoints
+    public func updateBreakpoints(_ breakpoints: Set<Breakpoint>) {
+        self.breakpoints = breakpoints
+        self.needsDisplay = true
+    }
+
+    // Add mouse handling for breakpoint toggling
+    public override func mouseDown(with event: NSEvent) {
+        let point = convert(event.locationInWindow, from: nil)
+        let breakpointAreaWidth: CGFloat = 40  // Width of clickable area for breakpoints
+        if point.x <= breakpointAreaWidth { // Breakpoint click area
+            if let line = lineNumberForPoint(point) {
+                toggleBreakpoint(at: line)
+            }
+        }
+    }
+
+    private func toggleBreakpoint(at line: Int) {
+        if let existing = breakpoints.first(where: { $0.line == line }) {
+            breakpoints.remove(existing)
+        } else {
+            breakpoints.insert(Breakpoint(line: line))
+        }
+        needsDisplay = true
+    }
+
+    private func lineNumberForPoint(_ point: NSPoint) -> Int? {
+        guard let textView = textView else { return nil }
+        return textView.layoutManager.visibleLines()
+            .first { line in
+                let lineRect = CGRect(
+                    x: 0,
+                    y: line.yPos,
+                    width: frame.width,
+                    height: line.height
+                )
+                return lineRect.contains(point)
+            }?.index
     }
 }

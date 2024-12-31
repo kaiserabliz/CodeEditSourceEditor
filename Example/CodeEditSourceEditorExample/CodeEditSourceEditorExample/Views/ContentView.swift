@@ -21,6 +21,10 @@ struct ContentView: View {
     @State private var cursorPositions: [CursorPosition] = []
     @AppStorage("systemCursor") private var useSystemCursor: Bool = false
     @State private var isInLongParse = false
+    
+    var myBreakpoints: Set<Breakpoint> {
+        return [Breakpoint(line: 6, isEnabled: true)]
+    }
 
     init(document: Binding<CodeEditSourceEditorExampleDocument>, fileURL: URL?) {
         self._document = document
@@ -72,7 +76,9 @@ struct ContentView: View {
                     lineHeight: 1.2,
                     wrapLines: wrapLines,
                     cursorPositions: $cursorPositions,
-                    useSystemCursor: useSystemCursor
+                    highlightProviders: [TreeSitterClient()],
+                    useSystemCursor: useSystemCursor,
+                    breakpoints: .constant(myBreakpoints)
                 )
             }
         }

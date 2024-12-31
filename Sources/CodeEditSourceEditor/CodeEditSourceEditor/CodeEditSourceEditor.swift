@@ -45,6 +45,7 @@ public struct CodeEditSourceEditor: NSViewControllerRepresentable {
     ///   - useSystemCursor: If true, uses the system cursor on `>=macOS 14`.
     ///   - undoManager: The undo manager for the text view. Defaults to `nil`, which will create a new CEUndoManager
     ///   - coordinators: Any text coordinators for the view to use. See ``TextViewCoordinator`` for more information.
+    ///   - breakpoints: The set of active breakpoints
     public init(
         _ text: Binding<String>,
         language: CodeLanguage,
@@ -65,7 +66,8 @@ public struct CodeEditSourceEditor: NSViewControllerRepresentable {
         bracketPairHighlight: BracketPairHighlight? = nil,
         useSystemCursor: Bool = true,
         undoManager: CEUndoManager? = nil,
-        coordinators: [any TextViewCoordinator] = []
+        coordinators: [any TextViewCoordinator] = [],
+        breakpoints: Binding<Set<Breakpoint>> = .constant([])
     ) {
         self.text = .binding(text)
         self.language = language
@@ -91,6 +93,14 @@ public struct CodeEditSourceEditor: NSViewControllerRepresentable {
         }
         self.undoManager = undoManager
         self.coordinators = coordinators
+        self.breakpoints = Binding(
+            get: {
+                Set(breakpoints.wrappedValue.map { Breakpoint(line: $0.line - 1, isEnabled: $0.isEnabled) })
+            },
+            set: { newValue in
+                breakpoints.wrappedValue = Set(newValue.map { Breakpoint(line: $0.line + 1, isEnabled: $0.isEnabled) })
+            }
+        )
     }
 
     /// Initializes a Text Editor
@@ -120,6 +130,7 @@ public struct CodeEditSourceEditor: NSViewControllerRepresentable {
     ///                           See `BracketPairHighlight` for more information. Defaults to `nil`
     ///   - undoManager: The undo manager for the text view. Defaults to `nil`, which will create a new CEUndoManager
     ///   - coordinators: Any text coordinators for the view to use. See ``TextViewCoordinator`` for more information.
+    ///   - breakpoints: The set of active breakpoints
     public init(
         _ text: NSTextStorage,
         language: CodeLanguage,
@@ -140,7 +151,8 @@ public struct CodeEditSourceEditor: NSViewControllerRepresentable {
         bracketPairHighlight: BracketPairHighlight? = nil,
         useSystemCursor: Bool = true,
         undoManager: CEUndoManager? = nil,
-        coordinators: [any TextViewCoordinator] = []
+        coordinators: [any TextViewCoordinator] = [],
+        breakpoints: Binding<Set<Breakpoint>> = .constant([])
     ) {
         self.text = .storage(text)
         self.language = language
@@ -166,6 +178,14 @@ public struct CodeEditSourceEditor: NSViewControllerRepresentable {
         }
         self.undoManager = undoManager
         self.coordinators = coordinators
+        self.breakpoints = Binding(
+            get: {
+                Set(breakpoints.wrappedValue.map { Breakpoint(line: $0.line + 1, isEnabled: $0.isEnabled) })
+            },
+            set: { newValue in
+                breakpoints.wrappedValue = Set(newValue.map { Breakpoint(line: $0.line + 1, isEnabled: $0.isEnabled) })
+            }
+        )
     }
 
     package var text: TextAPI
@@ -188,6 +208,7 @@ public struct CodeEditSourceEditor: NSViewControllerRepresentable {
     private var useSystemCursor: Bool
     private var undoManager: CEUndoManager?
     package var coordinators: [any TextViewCoordinator]
+    private let breakpoints: Binding<Set<Breakpoint>>
 
     public typealias NSViewControllerType = TextViewController
 
@@ -256,7 +277,13 @@ public struct CodeEditSourceEditor: NSViewControllerRepresentable {
 
         updateControllerParams(controller: controller)
 
-        controller.reloadUI()
+        // Update breakpoints directly without conditional binding
+        controller.gutterView.updateBreakpoints(breakpoints.wrappedValue)
+
+        if !paramsAreEqual(controller: controller) {
+            controller.reloadUI()
+        }
+
         return
     }
 
