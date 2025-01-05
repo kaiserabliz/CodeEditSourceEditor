@@ -22,7 +22,7 @@ struct ContentView: View {
     @AppStorage("systemCursor") private var useSystemCursor: Bool = false
     @State private var isInLongParse = false
     
-    var myBreakpoints: [Breakpoint] {
+    var breakpoints: [Breakpoint] {
         return [Breakpoint(line: 6, isEnabled: true)]
     }
 
@@ -78,7 +78,8 @@ struct ContentView: View {
                     cursorPositions: $cursorPositions,
                     highlightProviders: [TreeSitterClient()],
                     useSystemCursor: useSystemCursor,
-                    breakpoints: .constant(myBreakpoints)
+                    breakpoints: .constant(breakpoints),
+                    scrollingTargetLine: 30
                 )
             }
         }

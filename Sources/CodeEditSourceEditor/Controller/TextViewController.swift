@@ -307,6 +307,36 @@ public class TextViewController: NSViewController {
         highlighter?.invalidate()
     }
 
+    public func scrollToLine(_ line: Int, centered: Bool = true) {
+        // Get the text line info for the target line (lines are 0-indexed internally)
+        guard let lineInfo = textView.layoutManager.textLineForIndex(line - 1) else { return }
+
+        // Calculate the point to scroll to
+        var point = NSPoint(x: 0, y: lineInfo.yPos)
+
+        if centered {
+            // Center the line in the visible area
+            let visibleHeight = scrollView.contentView.bounds.height
+            point.y = max(0, point.y - (visibleHeight / 2))
+        }
+
+        // Scroll to the calculated point
+        scrollView.contentView.scroll(to: point)
+        scrollView.reflectScrolledClipView(scrollView.contentView)
+    }
+
+    // Scroll to line and set cursor
+    public func scrollToLineAndSelect(_ line: Int, column: Int = 1) {
+        scrollToLine(line)
+        setCursorPositions([CursorPosition(line: line, column: column)])
+    }
+
+    // Scroll to a specific range
+    public func scrollToRange(_ range: NSRange) {
+        guard let lineInfo = textView.layoutManager.textLineForOffset(range.location) else { return }
+        scrollToLine(lineInfo.index + 1) // Convert to 1-based line number
+    }
+
     deinit {
         if let highlighter {
             textView.removeStorageDelegate(highlighter)

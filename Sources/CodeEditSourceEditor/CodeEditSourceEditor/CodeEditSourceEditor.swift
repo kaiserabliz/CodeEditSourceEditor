@@ -67,7 +67,8 @@ public struct CodeEditSourceEditor: NSViewControllerRepresentable {
         useSystemCursor: Bool = true,
         undoManager: CEUndoManager? = nil,
         coordinators: [any TextViewCoordinator] = [],
-        breakpoints: Binding<[Breakpoint]> = .constant([])
+        breakpoints: Binding<[Breakpoint]> = .constant([]),
+        scrollingTargetLine: Int? = nil
     ) {
         self.text = .binding(text)
         self.language = language
@@ -94,6 +95,7 @@ public struct CodeEditSourceEditor: NSViewControllerRepresentable {
         self.undoManager = undoManager
         self.coordinators = coordinators
         self.breakpoints = breakpoints.wrappedValue.map { Breakpoint(line: $0.line - 1, isEnabled: $0.isEnabled) }
+        self.scrollingTargetLine = scrollingTargetLine
     }
 
     /// Initializes a Text Editor
@@ -145,7 +147,8 @@ public struct CodeEditSourceEditor: NSViewControllerRepresentable {
         useSystemCursor: Bool = true,
         undoManager: CEUndoManager? = nil,
         coordinators: [any TextViewCoordinator] = [],
-        breakpoints: Binding<[Breakpoint]> = .constant([])
+        breakpoints: Binding<[Breakpoint]> = .constant([]),
+        scrollingTargetLine: Int? = nil
     ) {
         self.text = .storage(text)
         self.language = language
@@ -172,6 +175,7 @@ public struct CodeEditSourceEditor: NSViewControllerRepresentable {
         self.undoManager = undoManager
         self.coordinators = coordinators
         self.breakpoints = breakpoints.wrappedValue.map { Breakpoint(line: $0.line - 1, isEnabled: $0.isEnabled) }
+        self.scrollingTargetLine = scrollingTargetLine
     }
 
     package var text: TextAPI
@@ -195,6 +199,7 @@ public struct CodeEditSourceEditor: NSViewControllerRepresentable {
     private var undoManager: CEUndoManager?
     package var coordinators: [any TextViewCoordinator]
     private let breakpoints: [Breakpoint]
+    private let scrollingTargetLine: Int?
 
     public typealias NSViewControllerType = TextViewController
 
@@ -254,6 +259,10 @@ public struct CodeEditSourceEditor: NSViewControllerRepresentable {
 
         // Set this no matter what to avoid having to compare object pointers.
         controller.textCoordinators = coordinators.map { WeakCoordinator($0) }
+
+        if let scrollingTargetLine {
+            controller.scrollToLineAndSelect(scrollingTargetLine)
+        }
 
         // Do manual diffing to reduce the amount of reloads.
         // This helps a lot in view performance, as it otherwise gets triggered on each environment change.
